@@ -4,6 +4,8 @@ import type { DropFilter, PlayerEvent, SpeechChunk, SpeechKind } from "../shared
 import { cleanForSpeech, splitSentences } from "./text.js";
 import type { TtsEngine } from "./tts.js";
 
+const HISTORY_SIZE = 20;
+
 export interface Player {
   enqueue(chunk: SpeechChunk): void;
   drop(filter: DropFilter): void;
@@ -33,6 +35,8 @@ export class SpeechQueue extends EventEmitter {
   private active: Active | null = null;
   private playerQueued = 0;
   private playing: { messageId: string; source: string; text: string } | null = null;
+  private lastSpoken: { messageId: string; source: string; text: string } | null = null;
+  private history = new Map<string, Message>();
 
   constructor(
     private tts: TtsEngine,
@@ -67,6 +71,36 @@ export class SpeechQueue extends EventEmitter {
     return { id: message.id, spokenText: sentences.join(" ") };
   }
 
+  canRepeat(): { sentence: boolean; message: boolean } {
+    const message = this.lastSpoken ? this.history.get(this.lastSpoken.messageId) : undefined;
+    return { sentence: this.lastSpoken !== null, message: (message?.sentences.length ?? 0) > 1 };
+  }
+
+  repeatLastSentence(): boolean {
+    if (!this.lastSpoken) return false;
+    const original = this.history.get(this.lastSpoken.messageId);
+    this.replay(this.lastSpoken.source, original?.kind ?? "summary", [this.lastSpoken.text]);
+    return true;
+  }
+
+  repeatLastMessage(): boolean {
+    const original = this.lastSpoken ? this.history.get(this.lastSpoken.messageId) : undefined;
+    if (!original) return false;
+    this.replay(original.source, original.kind, original.sentences);
+    return true;
+  }
+
+  private replay(source: string, kind: SpeechKind, sentences: string[]): void {
+    this.pending.unshift({ id: randomUUID(), source, kind, sentences: [...sentences] });
+    void this.pump();
+    this.emitState();
+  }
+
+  private remember(message: Message): void {
+    this.history.set(message.id, message);
+    while (this.history.size > HISTORY_SIZE) this.history.delete(this.history.keys().next().value!);
+  }
+
   stopAll(): void {
     this.pending = [];
     if (this.active) this.active.cancelled = true;
@@ -83,6 +117,7 @@ export class SpeechQueue extends EventEmitter {
   onPlayerEvent(event: PlayerEvent): void {
     if (event.type === "chunk-start") {
       this.playing = { messageId: event.messageId, source: event.source, text: event.text };
+      this.lastSpoken = this.playing;
       this.emit("caption", this.playing);
     } else if (event.type === "idle") {
       this.playing = null;
@@ -104,6 +139,7 @@ export class SpeechQueue extends EventEmitter {
     if (this.active) return;
     const message = this.pending.shift();
     if (!message) return;
+    this.remember(message);
     const active: Active = { message, cancelled: false };
     this.active = active;
     this.emitState();

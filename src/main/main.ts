@@ -13,16 +13,22 @@ import {
   type MenuItemConstructorOptions,
 } from "electron";
 import { join } from "node:path";
-import type { DropFilter, OrbState, PlayerEvent, SpeechChunk, SpeechKind } from "../shared/types.js";
+import type { DropFilter, MenuAction, MenuState, OrbState, PlayerEvent, SpeechChunk, SpeechKind } from "../shared/types.js";
 import { runInstaller } from "./installer.js";
 import { McpHttpServer } from "./mcp-server.js";
 import { SpeechQueue, type Player } from "./queue.js";
 import { settings } from "./settings.js";
 import { TtsEngine } from "./tts.js";
 
-const ORB_SIZE = { width: 340, height: 96 };
+const ORB_SIZE = { width: 340, height: 240 };
 const SPEEDS = [0.8, 0.9, 1, 1.1, 1.2, 1.35, 1.5];
 const VOLUMES = [0.25, 0.5, 0.75, 1];
+const UNLOAD_OPTIONS: Array<[string, number]> = [
+  ["After 5 minutes", 5],
+  ["After 10 minutes", 10],
+  ["After 30 minutes", 30],
+  ["Never", 0],
+];
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -34,7 +40,7 @@ let orb: BrowserWindow | null = null;
 let orbReady = false;
 const orbBacklog: Array<[string, unknown]> = [];
 let loadProgress = 0;
-let engineStatus: "loading" | "ready" | "error" = "loading";
+let engineStatus: "loading" | "ready" | "sleeping" | "error" = "loading";
 let engineError = "";
 let serverError = "";
 let quitting = false;
@@ -96,7 +102,7 @@ function visiblePosition(position: { x: number; y: number } | null): { x: number
   if (!position) return defaultOrbPosition();
   const inside = screen.getAllDisplays().some((display) => {
     const a = display.workArea;
-    return position.x + ORB_SIZE.width > a.x + 40 && position.x < a.x + a.width - 40 && position.y >= a.y - 20 && position.y < a.y + a.height - 40;
+    return position.x + ORB_SIZE.width > a.x + 40 && position.x < a.x + a.width - 40 && position.y >= a.y - 20 && position.y + ORB_SIZE.height <= a.y + a.height + 20;
   });
   return inside ? position : defaultOrbPosition();
 }
@@ -170,6 +176,7 @@ function statusLine(): string {
   if (settings.get().muted) return "Muted";
   if (status.current) return `Speaking (${status.current.source})`;
   if (status.speaking) return "Preparing speech…";
+  if (engineStatus === "sleeping") return "Ready (voice unloaded to save memory)";
   return "Ready";
 }
 
@@ -200,6 +207,27 @@ function voiceMenu(): MenuItemConstructorOptions[] {
   return items;
 }
 
+function orbMenuState(): MenuState {
+  const status = queue.status();
+  const repeat = queue.canRepeat();
+  const muted = settings.get().muted;
+  return {
+    muted,
+    enabled: {
+      "repeat-sentence": repeat.sentence && !muted,
+      "repeat-message": repeat.message && !muted,
+      stop: status.speaking || status.queued > 0,
+    },
+  };
+}
+
+function runMenuAction(action: MenuAction): void {
+  if (action === "repeat-sentence") queue.repeatLastSentence();
+  else if (action === "repeat-message") queue.repeatLastMessage();
+  else if (action === "stop") queue.stopAll();
+  else if (action === "mute") toggleMute();
+}
+
 function buildMenu(): Menu {
   const s = settings.get();
   const status = queue.status();
@@ -208,6 +236,7 @@ function buildMenu(): Menu {
     { type: "separator" },
     { label: "Mute", type: "checkbox", checked: s.muted, accelerator: s.muteHotkey, click: toggleMute },
     { label: "Stop speaking", enabled: status.speaking || status.queued > 0, accelerator: s.stopHotkey, click: () => queue.stopAll() },
+    { label: "Repeat last sentence", enabled: queue.canRepeat().sentence && !s.muted, click: () => queue.repeatLastSentence() },
     { type: "separator" },
     { label: "Voice", submenu: voiceMenu() },
     {
@@ -228,10 +257,19 @@ function buildMenu(): Menu {
         click: () => settings.update({ volume }),
       })),
     },
+    {
+      label: "Free memory when idle",
+      submenu: UNLOAD_OPTIONS.map(([label, minutes]) => ({
+        label,
+        type: "radio" as const,
+        checked: s.unloadAfterMinutes === minutes,
+        click: () => settings.update({ unloadAfterMinutes: minutes }),
+      })),
+    },
     { label: "Show orb", type: "checkbox", checked: s.showOrb, click: () => settings.update({ showOrb: !settings.get().showOrb }) },
     engineStatus === "error"
       ? { label: "Retry loading the voice", click: () => void retryEngine() }
-      : { label: "Speak a test sentence", enabled: engineStatus === "ready", click: () => speakTest() },
+      : { label: "Speak a test sentence", enabled: engineStatus === "ready" || engineStatus === "sleeping", click: () => speakTest() },
     { type: "separator" },
     { label: "Install for Claude Code and Codex…", click: () => void runInstaller(settings.get().port) },
     { label: "Copy MCP server URL", click: () => clipboard.writeText(`http://127.0.0.1:${settings.get().port}/mcp`) },
@@ -271,7 +309,8 @@ function wireIpc(): void {
     orb?.webContents.send("orb:state", orbState());
   });
   ipcMain.on("player:event", (_event, value: PlayerEvent) => queue.onPlayerEvent(value));
-  ipcMain.on("orb:click", () => queue.stopAll());
+  ipcMain.on("orb:click", () => orb?.webContents.send("orb:menu", orbMenuState()));
+  ipcMain.on("orb:menu-action", (_event, action: MenuAction) => runMenuAction(action));
   ipcMain.on("orb:context-menu", () => buildMenu().popup({ window: orb ?? undefined }));
   ipcMain.on("orb:hover", (_event, inside: boolean) => {
     if (inside) orb?.setIgnoreMouseEvents(false);
@@ -321,6 +360,7 @@ app.whenReady().then(async () => {
     if ("showOrb" in changed) setOrbVisible(current.showOrb);
     if ("volume" in changed) sendToOrb("player:volume", current.volume);
     if ("stopHotkey" in changed || "muteHotkey" in changed) registerHotkeys();
+    if ("unloadAfterMinutes" in changed) tts.setUnloadAfter(current.unloadAfterMinutes);
     refresh();
   });
   queue.on("state", refresh);
@@ -335,8 +375,17 @@ app.whenReady().then(async () => {
     loadProgress = fraction;
     refresh();
   });
-  tts.on("exit", (code) => {
-    if (quitting) return;
+  tts.on("loading", () => {
+    engineStatus = "loading";
+    loadProgress = 0;
+    refresh();
+  });
+  tts.on("sleep", () => {
+    engineStatus = "sleeping";
+    refresh();
+  });
+  tts.on("exit", (code: number, expected: boolean) => {
+    if (quitting || expected) return;
     if (engineStatus === "ready") {
       engineStatus = "loading";
       refresh();
@@ -349,6 +398,7 @@ app.whenReady().then(async () => {
   });
 
   registerHotkeys();
+  tts.setUnloadAfter(settings.get().unloadAfterMinutes);
   await startServer();
   await bootEngine();
 });

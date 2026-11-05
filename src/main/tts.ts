@@ -24,11 +24,22 @@ export class TtsEngine extends EventEmitter {
   private nextId = 1;
   private readyPromise: Promise<void> | null = null;
   private progress = new Map<string, { loaded: number; total: number }>();
+  private idleTimer: NodeJS.Timeout | null = null;
+  private expectedExit = false;
+  private unloadAfterMs = 0;
   voices: Voice[] = [];
   ready = false;
 
+  setUnloadAfter(minutes: number): void {
+    this.unloadAfterMs = Math.max(0, minutes) * 60_000;
+    this.scheduleUnload();
+  }
+
   start(): Promise<void> {
     if (this.readyPromise) return this.readyPromise;
+    this.expectedExit = false;
+    this.progress.clear();
+    this.emit("loading");
     this.readyPromise = new Promise((resolve, reject) => {
       const child = utilityProcess.fork(join(import.meta.dirname, "tts-worker.js"), [], {
         serviceName: "Breathing TTS",
@@ -47,6 +58,7 @@ export class TtsEngine extends EventEmitter {
           this.ready = true;
           this.emit("ready");
           resolve();
+          this.scheduleUnload();
         } else if (message.type === "progress") {
           this.progress.set(message.file, { loaded: message.loaded, total: message.total });
           this.emit("progress", this.progressFraction());
@@ -54,11 +66,13 @@ export class TtsEngine extends EventEmitter {
           const entry = this.pending.get(message.id);
           this.pending.delete(message.id);
           entry?.resolve({ pcm: message.pcm, sampleRate: message.sampleRate });
+          this.scheduleUnload();
         } else if (message.type === "error") {
           if (message.id !== undefined) {
             const entry = this.pending.get(message.id);
             this.pending.delete(message.id);
             entry?.reject(new Error(message.message));
+            this.scheduleUnload();
           } else {
             reject(new Error(message.message));
             child.kill();
@@ -66,12 +80,16 @@ export class TtsEngine extends EventEmitter {
         }
       });
       child.on("exit", (code) => {
+        const expected = this.expectedExit;
+        this.expectedExit = false;
+        this.clearIdleTimer();
         this.ready = false;
         this.readyPromise = null;
         this.child = null;
         for (const entry of this.pending.values()) entry.reject(new Error(`TTS process exited (${code})`));
         this.pending.clear();
-        this.emit("exit", code);
+        this.emit("exit", code, expected);
+        if (expected) this.emit("sleep");
         reject(new Error(`TTS process exited (${code})`));
       });
       this.send({ type: "init", cacheDir: join(app.getPath("userData"), "models") });
@@ -80,6 +98,7 @@ export class TtsEngine extends EventEmitter {
   }
 
   async generate(text: string, voice: string, speed: number): Promise<AudioResult> {
+    this.clearIdleTimer();
     await this.start();
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
@@ -89,7 +108,24 @@ export class TtsEngine extends EventEmitter {
   }
 
   stop(): void {
-    this.child?.kill();
+    this.clearIdleTimer();
+    if (!this.child) return;
+    this.expectedExit = true;
+    this.child.kill();
+  }
+
+  private scheduleUnload(): void {
+    this.clearIdleTimer();
+    if (this.unloadAfterMs <= 0 || !this.child || this.pending.size > 0) return;
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = null;
+      if (this.pending.size === 0) this.stop();
+    }, this.unloadAfterMs);
+  }
+
+  private clearIdleTimer(): void {
+    if (this.idleTimer) clearTimeout(this.idleTimer);
+    this.idleTimer = null;
   }
 
   private progressFraction(): number {

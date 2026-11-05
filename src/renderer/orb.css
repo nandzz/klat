@@ -23,14 +23,17 @@ body {
 #stage {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  padding-right: 14px;
 }
 
 #caption {
+  position: absolute;
+  right: 84px;
+  bottom: 18px;
+  min-height: 60px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   max-width: 236px;
   padding: 8px 11px;
   border-radius: 12px;
@@ -68,7 +71,9 @@ body {
 }
 
 #orb {
-  position: relative;
+  position: absolute;
+  right: 14px;
+  bottom: 18px;
   width: 60px;
   height: 60px;
   flex: none;
@@ -200,4 +205,65 @@ body {
   stroke-dasharray: 182.2;
   stroke-dashoffset: calc(182.2 * (1 - var(--progress)));
   transition: stroke-dashoffset 200ms ease;
+}
+
+#menu {
+  position: absolute;
+  right: 14px;
+  bottom: 86px;
+  min-width: 176px;
+  padding: 5px;
+  border-radius: 12px;
+  background: var(--bubble);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.32);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(6px) scale(0.98);
+  transform-origin: bottom right;
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+#menu[hidden] {
+  display: none;
+}
+
+#menu.open {
+  opacity: 1;
+  transform: none;
+}
+
+#menu button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  padding: 6px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+#menu button:hover:not(:disabled) {
+  background: rgba(124, 242, 212, 0.16);
+}
+
+#menu button:disabled {
+  color: var(--ink-dim);
+  opacity: 0.55;
+  cursor: default;
+}
+
+#menu .separator {
+  height: 1px;
+  margin: 4px 6px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#orb.resting .core,
+#orb.resting .halo {
+  animation-play-state: paused;
 }

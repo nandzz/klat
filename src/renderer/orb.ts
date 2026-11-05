@@ -1,4 +1,4 @@
-import type { DropFilter, OrbState, PlayerEvent, SpeechChunk } from "../shared/types.js";
+import type { DropFilter, MenuAction, MenuState, OrbState, PlayerEvent, SpeechChunk } from "../shared/types.js";
 
 interface BreathingApi {
   onEnqueue(cb: (chunk: SpeechChunk) => void): void;
@@ -7,6 +7,8 @@ interface BreathingApi {
   onState(cb: (state: OrbState & { progress?: number }) => void): void;
   playerEvent(event: PlayerEvent): void;
   click(): void;
+  onMenu(cb: (state: MenuState) => void): void;
+  menuAction(action: MenuAction): void;
   contextMenu(): void;
   hover(inside: boolean): void;
   dragBy(dx: number, dy: number): void;
@@ -19,9 +21,12 @@ const orb = document.getElementById("orb")!;
 const caption = document.getElementById("caption")!;
 const captionSource = document.getElementById("caption-source")!;
 const captionText = document.getElementById("caption-text")!;
+const menu = document.getElementById("menu")!;
 const root = document.documentElement;
 
 const SENTENCE_GAP_MS = 90;
+const REST_AFTER_MS = 20_000;
+const SUSPEND_AUDIO_AFTER_MS = 3_000;
 
 const ctx = new AudioContext({ latencyHint: "interactive" });
 const gain = ctx.createGain();
@@ -71,6 +76,7 @@ function playNext(): void {
   };
   current = { chunk, node };
   setSpeaking(true);
+  startAnimation();
   showCaption(chunk.source, chunk.text);
   api.playerEvent({ type: "chunk-start", messageId: chunk.messageId, source: chunk.source, text: chunk.text });
   node.start();
@@ -95,6 +101,33 @@ function drop(filter: DropFilter): void {
 function setSpeaking(speaking: boolean): void {
   orb.dataset.status = speaking && baseStatus !== "muted" ? "speaking" : baseStatus;
   if (!speaking) hideCaption();
+  updateRest();
+}
+
+let restTimer: number | null = null;
+let audioTimer: number | null = null;
+
+function updateRest(): void {
+  const busy = current !== null || queue.length > 0 || baseStatus === "loading" || hovering || !menu.hidden;
+  if (busy) {
+    if (restTimer !== null) window.clearTimeout(restTimer);
+    restTimer = null;
+    orb.classList.remove("resting");
+  } else if (restTimer === null && !orb.classList.contains("resting")) {
+    restTimer = window.setTimeout(() => {
+      restTimer = null;
+      orb.classList.add("resting");
+    }, REST_AFTER_MS);
+  }
+  if (current !== null || queue.length > 0) {
+    if (audioTimer !== null) window.clearTimeout(audioTimer);
+    audioTimer = null;
+  } else if (audioTimer === null && ctx.state === "running") {
+    audioTimer = window.setTimeout(() => {
+      audioTimer = null;
+      if (current === null && queue.length === 0) void ctx.suspend();
+    }, SUSPEND_AUDIO_AFTER_MS);
+  }
 }
 
 function showCaption(source: string, text: string): void {
@@ -109,6 +142,8 @@ function hideCaption(): void {
 
 const levels = new Float32Array(analyser.fftSize);
 let smoothed = 0;
+let animating = false;
+
 function animate(): void {
   if (current) {
     analyser.getFloatTimeDomainData(levels);
@@ -121,9 +156,20 @@ function animate(): void {
     smoothed *= 0.85;
   }
   root.style.setProperty("--level", smoothed.toFixed(3));
+  if (current || smoothed > 0.002) {
+    requestAnimationFrame(animate);
+  } else {
+    smoothed = 0;
+    root.style.setProperty("--level", "0");
+    animating = false;
+  }
+}
+
+function startAnimation(): void {
+  if (animating) return;
+  animating = true;
   requestAnimationFrame(animate);
 }
-requestAnimationFrame(animate);
 
 api.onEnqueue((chunk) => {
   queue.push(chunk);
@@ -138,40 +184,102 @@ api.onState((state) => {
   baseStatus = state.status === "speaking" ? "idle" : state.status;
   if (typeof state.progress === "number") root.style.setProperty("--progress", state.progress.toFixed(3));
   setSpeaking(current !== null);
-  orb.title = state.detail ? `Breathing: ${state.detail}` : "Breathing: click to stop, right click for menu";
+  orb.title = state.detail ? `Breathing: ${state.detail}` : "Breathing: click for repeat and stop, right click for all settings";
 });
 
 let dragStart: { x: number; y: number } | null = null;
 let dragged = false;
+let hovering = false;
+let menuCloseTimer: number | null = null;
 
-orb.addEventListener("mouseenter", () => api.hover(true));
-orb.addEventListener("mouseleave", () => {
-  if (!dragStart) api.hover(false);
+function setHover(inside: boolean): void {
+  if (inside === hovering) return;
+  hovering = inside;
+  api.hover(inside);
+  updateRest();
+}
+
+function isInteractive(target: Element | null): boolean {
+  if (!target) return false;
+  if (target.closest("#orb")) return true;
+  return !menu.hidden && target.closest("#menu") !== null;
+}
+
+function openMenu(state: MenuState): void {
+  for (const button of menu.querySelectorAll<HTMLButtonElement>("button[data-action]")) {
+    const action = button.dataset.action as MenuAction;
+    if (action === "mute") button.textContent = state.muted ? "Unmute" : "Mute";
+    else button.disabled = !state.enabled[action];
+  }
+  menu.hidden = false;
+  updateRest();
+  requestAnimationFrame(() => menu.classList.add("open"));
+}
+
+function closeMenu(): void {
+  if (menuCloseTimer !== null) window.clearTimeout(menuCloseTimer);
+  menuCloseTimer = null;
+  menu.classList.remove("open");
+  menu.hidden = true;
+  updateRest();
+}
+
+function scheduleMenuClose(): void {
+  if (menu.hidden || menuCloseTimer !== null) return;
+  menuCloseTimer = window.setTimeout(closeMenu, 700);
+}
+
+function cancelMenuClose(): void {
+  if (menuCloseTimer !== null) window.clearTimeout(menuCloseTimer);
+  menuCloseTimer = null;
+}
+
+window.addEventListener("mousemove", (event) => {
+  if (dragStart) {
+    const dx = event.screenX - dragStart.x;
+    const dy = event.screenY - dragStart.y;
+    if (!dragged && Math.hypot(dx, dy) < 4) return;
+    dragged = true;
+    closeMenu();
+    dragStart = { x: event.screenX, y: event.screenY };
+    api.dragBy(dx, dy);
+    return;
+  }
+  const inside = isInteractive(document.elementFromPoint(event.clientX, event.clientY));
+  setHover(inside);
+  if (inside) cancelMenuClose();
+  else scheduleMenuClose();
+});
+document.addEventListener("mouseleave", () => {
+  if (dragStart) return;
+  setHover(false);
+  scheduleMenuClose();
 });
 orb.addEventListener("mousedown", (event) => {
   if (event.button !== 0) return;
   dragStart = { x: event.screenX, y: event.screenY };
   dragged = false;
 });
-window.addEventListener("mousemove", (event) => {
-  if (!dragStart) return;
-  const dx = event.screenX - dragStart.x;
-  const dy = event.screenY - dragStart.y;
-  if (!dragged && Math.hypot(dx, dy) < 4) return;
-  dragged = true;
-  dragStart = { x: event.screenX, y: event.screenY };
-  api.dragBy(dx, dy);
-});
 window.addEventListener("mouseup", (event) => {
   if (!dragStart) return;
   dragStart = null;
   if (dragged) api.dragEnd();
-  else if (event.button === 0) api.click();
-  if (!orb.matches(":hover")) api.hover(false);
+  else if (event.button === 0) {
+    if (menu.hidden) api.click();
+    else closeMenu();
+  }
 });
 orb.addEventListener("contextmenu", (event) => {
   event.preventDefault();
+  closeMenu();
   api.contextMenu();
 });
+menu.addEventListener("click", (event) => {
+  const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>("button[data-action]") : null;
+  if (!button || button.disabled) return;
+  api.menuAction(button.dataset.action as MenuAction);
+  closeMenu();
+});
 
+api.onMenu(openMenu);
 api.ready();

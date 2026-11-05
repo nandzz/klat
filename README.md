@@ -36,16 +36,14 @@ npm run dist
 
 Open the menu bar icon and click **Install for Claude Code and Codex…**. The app shows the exact changes and asks before it writes them:
 
-- **Claude Code**: `claude mcp add --scope user --transport http breathing http://127.0.0.1:48613/mcp`, and the skill in `~/.claude/skills/breathing/`.
+- **Claude Code**: `claude mcp add --scope user breathing` with the stdio bridge (see below), and the skill in `~/.claude/skills/breathing/`.
 - **Codex**: a `[mcp_servers.breathing]` block in `~/.codex/config.toml` that starts the stdio bridge, and the skill in `~/.codex/skills/breathing/`.
 
 Start a new agent session after the install.
 
 ### Manual
 
-The app runs an MCP server with Streamable HTTP on `http://127.0.0.1:48613/mcp`. Use this URL in any client that supports HTTP MCP servers.
-
-For clients that only support stdio, use the bridge. It forwards calls to the app, and it starts the app if it does not run:
+Use the stdio bridge. The client starts the bridge when a session starts. The bridge starts the app if it does not run, and it connects again if the app restarts. So a session never loses the voice because the app was closed when the session started.
 
 ```json
 {
@@ -55,7 +53,15 @@ For clients that only support stdio, use the bridge. It forwards calls to the ap
 }
 ```
 
+For Claude Code:
+
+```bash
+claude mcp add --scope user breathing -e ELECTRON_RUN_AS_NODE=1 -- /Applications/Breathing.app/Contents/MacOS/Breathing /Applications/Breathing.app/Contents/Resources/app.asar/dist/bridge/bridge.js
+```
+
 Copy `skill/breathing/SKILL.md` to the skills folder of your client.
+
+The app also runs an MCP server with Streamable HTTP on `http://127.0.0.1:48613/mcp`. You can use it directly, but a client that connects over HTTP keeps the server as failed for the whole session if the app is not running when the session starts. MCP servers load only when a session starts, so sessions that were open before the install do not have the voice.
 
 ## MCP tools
 
@@ -89,13 +95,35 @@ The app also cleans the text before speech: it removes Markdown and code blocks,
 
 | Control | Action |
 |---|---|
-| Click the orb | Stop speaking |
+| Click the orb | Small menu: repeat last sentence, repeat last message, stop speaking, mute |
 | Drag the orb | Move it (the position is saved) |
-| Right click the orb, or click the menu bar icon | Menu: mute, stop, voice, speed, volume, show orb, test sentence, install, start at login |
+| Right click the orb, or click the menu bar icon | Full menu: mute, stop, repeat last sentence, voice, speed, volume, show orb, test sentence, install, start at login |
 | `Control+Option+Command+S` | Stop speaking |
 | `Control+Option+Command+M` | Mute or unmute |
 
 Settings are in `~/Library/Application Support/Breathing/settings.json`. You can change the port and the hotkeys there.
+
+## Resource use
+
+Measured on an Apple Silicon Mac with the packaged app:
+
+| State | CPU | Memory |
+|---|---|---|
+| Idle, voice model loaded | about 0.3% | about 940 MB |
+| Idle, voice model unloaded | about 0.1% | about 510 MB |
+
+- The voice model uses about 450 MB while it is loaded. **Free memory when idle** in the menu unloads it after 5, 10 (default) or 30 minutes without speech. The next message loads it again, which adds about 3 seconds before the first sound.
+- The orb stops its breathing animation 20 seconds after it stops speaking. It starts again when it speaks, when the model loads, or when you point at it.
+- The audio output is released 3 seconds after the last sentence.
+- Speech generation uses the CPU for a short time per sentence, about one third of the sentence duration.
+
+## Tests
+
+```bash
+npm test
+```
+
+The unit tests use Vitest. They cover the text cleanup, the speech queue (order, drop rules, interrupt, stop, repeat), the MCP server (tools, client names, mute, Host and Origin checks), and the Codex config writer.
 
 ## Test from the terminal
 
@@ -117,9 +145,11 @@ node scripts/say.mjs status
 | `src/main/text.ts` | Text cleanup and sentence split |
 | `src/main/mcp-server.ts` | MCP server (Streamable HTTP, localhost only) |
 | `src/main/installer.ts` | Setup for Claude Code and Codex |
+| `src/main/toml.ts` | Codex config writer |
 | `src/bridge/bridge.ts` | stdio to HTTP bridge |
 | `src/renderer/` | Orb and audio player |
 | `skill/breathing/` | The skill for agents |
+| `test/` | Unit tests |
 
 ## Not in this version
 

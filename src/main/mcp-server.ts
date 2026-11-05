@@ -43,6 +43,11 @@ export class McpHttpServer {
     });
   }
 
+  get port(): number {
+    const address = this.http?.address();
+    return address && typeof address === "object" ? address.port : 0;
+  }
+
   async close(): Promise<void> {
     for (const transport of this.sessions.values()) await transport.close();
     this.sessions.clear();

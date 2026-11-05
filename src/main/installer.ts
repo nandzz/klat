@@ -4,6 +4,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
+import { codexServerBlock, upsertTomlSection } from "./toml.js";
 
 const run = promisify(execFile);
 const HOME = homedir();
@@ -46,34 +47,12 @@ function copySkill(target: string): void {
   cpSync(skillSource(), target, { recursive: true });
 }
 
-function tomlString(value: string): string {
-  return JSON.stringify(value);
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-function codexBlock(): string {
-  const launch = bridgeLaunch();
-  return [
-    `[mcp_servers.${SERVER_NAME}]`,
-    `command = ${tomlString(launch.command)}`,
-    `args = [${launch.args.map(tomlString).join(", ")}]`,
-    `startup_timeout_sec = 40`,
-    `env = { ELECTRON_RUN_AS_NODE = "1" }`,
-  ].join("\n");
-}
-
-function upsertTomlSection(content: string, header: string, block: string): string {
-  const lines = content.split("\n");
-  const start = lines.findIndex((line) => line.trim() === header);
-  if (start === -1) return `${content.replace(/\s*$/, "")}\n\n${block}\n`;
-  let end = start + 1;
-  while (end < lines.length && !/^\s*\[/.test(lines[end]!)) end++;
-  lines.splice(start, end - start, ...block.split("\n"), "");
-  return lines.join("\n");
-}
-
-export async function planInstall(port: number): Promise<Step[]> {
+export async function planInstall(): Promise<Step[]> {
   const steps: Step[] = [];
-  const url = `http://127.0.0.1:${port}/mcp`;
 
   const claude = await findCommand("claude");
   if (claude || existsSync(join(HOME, ".claude"))) {
@@ -81,10 +60,12 @@ export async function planInstall(port: number): Promise<Step[]> {
     if (claude) {
       steps.push({
         client: "Claude Code",
-        description: `Run: claude mcp add --scope user --transport http ${SERVER_NAME} ${url}`,
+        description: `Run: claude mcp add --scope user ${SERVER_NAME} (stdio bridge, starts the app when needed)`,
         apply: async () => {
+          const launch = bridgeLaunch();
+          const command = [launch.command, ...launch.args].map(shellQuote).join(" ");
           await loginShell(`claude mcp remove --scope user ${SERVER_NAME} >/dev/null 2>&1 || true`);
-          await loginShell(`claude mcp add --scope user --transport http ${SERVER_NAME} ${url}`);
+          await loginShell(`claude mcp add --scope user ${SERVER_NAME} -e ELECTRON_RUN_AS_NODE=1 -- ${command}`);
         },
       });
     }
@@ -106,7 +87,7 @@ export async function planInstall(port: number): Promise<Step[]> {
       apply: async () => {
         mkdirSync(codexHome, { recursive: true });
         const current = existsSync(configFile) ? readFileSync(configFile, "utf8") : "";
-        writeFileSync(configFile, upsertTomlSection(current, `[mcp_servers.${SERVER_NAME}]`, codexBlock()));
+        writeFileSync(configFile, upsertTomlSection(current, `[mcp_servers.${SERVER_NAME}]`, codexServerBlock(SERVER_NAME, bridgeLaunch())));
       },
     });
     steps.push({
@@ -120,7 +101,7 @@ export async function planInstall(port: number): Promise<Step[]> {
 }
 
 export async function runInstaller(port: number): Promise<void> {
-  const steps = await planInstall(port);
+  const steps = await planInstall();
   if (steps.length === 0) {
     await dialog.showMessageBox({
       type: "info",

@@ -8,11 +8,18 @@
   </head>
   <body>
     <div id="stage">
+      <div id="menu" role="menu" data-interactive hidden>
+        <button data-action="repeat-sentence" role="menuitem">Repeat last sentence</button>
+        <button data-action="repeat-message" role="menuitem">Repeat last message</button>
+        <button data-action="stop" role="menuitem">Stop speaking</button>
+        <div class="separator"></div>
+        <button data-action="mute" role="menuitem">Mute</button>
+      </div>
       <div id="caption" aria-live="polite">
         <div id="caption-source"></div>
         <div id="caption-text"></div>
       </div>
-      <div id="orb" data-status="loading" title="Breathing: click to stop, right click for menu">
+      <div id="orb" data-status="loading" title="Breathing: click for repeat and stop, right click for all settings">
         <div class="halo"></div>
         <div class="core"></div>
         <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">

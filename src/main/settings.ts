@@ -12,6 +12,7 @@ export interface Settings {
   port: number;
   stopHotkey: string;
   muteHotkey: string;
+  unloadAfterMinutes: number;
 }
 
 export const DEFAULT_PORT = 48613;
@@ -26,6 +27,7 @@ const defaults: Settings = {
   port: DEFAULT_PORT,
   stopHotkey: "Control+Option+Command+S",
   muteHotkey: "Control+Option+Command+M",
+  unloadAfterMinutes: 10,
 };
 
 type Listener = (settings: Settings, changed: Partial<Settings>) => void;

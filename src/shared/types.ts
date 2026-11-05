@@ -26,3 +26,10 @@ export interface OrbState {
   status: "idle" | "speaking" | "muted" | "loading" | "error";
   detail?: string;
 }
+
+export type MenuAction = "repeat-sentence" | "repeat-message" | "stop" | "mute";
+
+export interface MenuState {
+  muted: boolean;
+  enabled: Record<Exclude<MenuAction, "mute">, boolean>;
+}

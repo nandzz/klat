@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld("breathing", {
   onState: (cb: Callback<unknown>) => on("orb:state", cb),
   playerEvent: (event: unknown) => ipcRenderer.send("player:event", event),
   click: () => ipcRenderer.send("orb:click"),
+  onMenu: (cb: Callback<unknown>) => on("orb:menu", cb),
+  menuAction: (action: string) => ipcRenderer.send("orb:menu-action", action),
   contextMenu: () => ipcRenderer.send("orb:context-menu"),
   hover: (inside: boolean) => ipcRenderer.send("orb:hover", inside),
   dragBy: (dx: number, dy: number) => ipcRenderer.send("orb:drag", dx, dy),
