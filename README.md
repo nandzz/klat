@@ -84,8 +84,9 @@ The server also sends short speech rules as MCP server instructions. So an agent
 
 The skill in [skill/breathing/SKILL.md](skill/breathing/SKILL.md) tells the agent:
 
-- Speak at the end of a turn that did real work, at real milestones of long tasks, and when it is blocked or needs a decision.
-- Speak only when it helps. Skip trivial replies.
+- Speak before every final answer that has content, also read-only answers such as a status report. Skip only one-line replies.
+- Speak at real milestones of long tasks, and when it is blocked or needs a decision.
+- Load the tool first when the client lists it as deferred.
 - One or two sentences by default. Longer only when the user asks.
 - Never speak code, paths, URLs or long lists. Point to the output instead.
 

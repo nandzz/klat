@@ -15,7 +15,8 @@ export interface VoiceBackend {
 }
 
 const SPEAK_DESCRIPTION = `Say a short spoken message to the user through their speakers. Returns at once; audio plays in the background.
-Use it like a coworker: give context and point to your output ("I fixed the bug and added two tests. Check the auth changes."). Do not read your answer aloud.
+Call it once before every final answer that has content, also for read-only answers such as a status or a report: the user often is not looking at the screen.
+Use it like a coworker: say what you found or did and point to your answer ("The project is in code review, four PRs wait for review. The details are in my answer."). Do not read your answer aloud.
 Keep it to one or two plain sentences unless the user asked for more. No code, paths, URLs or Markdown.`;
 
 export class McpHttpServer {
