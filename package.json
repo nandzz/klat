@@ -1,0 +1,53 @@
+{
+  "name": "breathing",
+  "productName": "Breathing",
+  "version": "0.1.0",
+  "description": "A local voice for AI coding agents, exposed over MCP.",
+  "main": "dist/main/main.js",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "nandzz",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-static.mjs",
+    "start": "npm run build && electron .",
+    "dist": "npm run build && electron-builder --mac --dir",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.8.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "kokoro-js": "^1.2.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0",
+    "typescript": "^7.0.2"
+  },
+  "build": {
+    "appId": "dev.nandzz.breathing",
+    "productName": "Breathing",
+    "files": [
+      "dist/**/*",
+      "skill/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/onnxruntime-node/**/*",
+      "node_modules/kokoro-js/**/*",
+      "node_modules/phonemizer/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": "dir",
+      "extendInfo": {
+        "LSUIElement": true
+      }
+    },
+    "directories": {
+      "output": "dist-app"
+    }
+  }
+}

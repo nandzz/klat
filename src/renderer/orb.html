@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'" />
+    <title>Breathing</title>
+    <link rel="stylesheet" href="orb.css" />
+  </head>
+  <body>
+    <div id="stage">
+      <div id="caption" aria-live="polite">
+        <div id="caption-source"></div>
+        <div id="caption-text"></div>
+      </div>
+      <div id="orb" data-status="loading" title="Breathing: click to stop, right click for menu">
+        <div class="halo"></div>
+        <div class="core"></div>
+        <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
+          <circle class="ring-track" cx="32" cy="32" r="29" />
+          <circle class="ring-progress" cx="32" cy="32" r="29" />
+        </svg>
+        <div class="mute-mark" aria-hidden="true"></div>
+      </div>
+    </div>
+    <script type="module" src="orb.js"></script>
+  </body>
+</html>
