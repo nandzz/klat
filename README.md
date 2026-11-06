@@ -14,7 +14,7 @@ Your agent finishes the work. You are in another window. Klat tells you, like a 
 ![MCP](https://img.shields.io/badge/MCP-server-6e56cf)
 
 ```bash
-brew tap nandzz/tap && brew trust nandzz/tap && brew install --cask klat
+brew update && brew tap nandzz/tap && brew trust nandzz/tap && brew install --cask nandzz/tap/klat
 ```
 
 </div>
@@ -37,6 +37,12 @@ You start a long task in Claude Code or Codex, and you switch to Slack, a browse
 
 **1. Install**
 
+Update Homebrew. If you added `nandzz/tap` before, this also gets the newest casks of the tap:
+
+```bash
+brew update
+```
+
 Add the tap:
 
 ```bash
@@ -52,7 +58,7 @@ brew trust nandzz/tap
 Install Klat:
 
 ```bash
-brew install --cask klat
+brew install --cask nandzz/tap/klat
 ```
 
 You can also download the zip from [Releases](https://github.com/nandzz/klat/releases/latest). The app is signed with a Developer ID certificate and notarized by Apple.
@@ -184,6 +190,8 @@ Measured on an Apple Silicon Mac:
 
 | Problem | What to do |
 |---|---|
+| `Cask 'klat' is unavailable` | Your copy of the tap is old. Run `brew update`, then `brew install --cask nandzz/tap/klat`. Check the spelling: Homebrew suggests other casks, such as fonts, when the name is wrong. |
+| `Refusing to load cask … from untrusted tap` | Run `brew trust nandzz/tap`, then install again. |
 | The agent does not speak | Start a new session. Agents load MCP servers only at session start. Check that the server is connected: `claude mcp list`. |
 | The agent says "Voice not available" | Open Klat from Applications. The bridge could not start it. |
 | The orb shows "Port 48613 is in use" | Another app uses the port. Change `port` in `settings.json`, quit and open Klat, and start a new agent session. The bridge reads the port from `settings.json`. |
