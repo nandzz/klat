@@ -1,4 +1,4 @@
-# Breathing — a voice for AI coding agents
+# Klat — a voice for AI coding agents
 
 ## Goal
 
@@ -50,7 +50,7 @@ This is the **output** system only. Speech input (the user talks to the agent) i
 Agents start MCP servers in different ways, but there must be only one app and one audio output. So:
 
 - The app runs a **Streamable HTTP MCP server on `127.0.0.1`** (fixed default port, configurable).
-- Also ship a small **stdio bridge** binary (`breathing-mcp`) for clients that only support stdio. It forwards calls to the running app. If the app does not run, the bridge starts it.
+- Also ship a small **stdio bridge** binary (`klat-mcp`) for clients that only support stdio. It forwards calls to the running app. If the app does not run, the bridge starts it.
 - Accept only local connections.
 
 Tools:
@@ -86,7 +86,7 @@ Store voice, speed, volume, mute, orb visibility, orb position, port, and hotkey
 
 ## The skill
 
-Ship a skill in the format of each client (Claude Code: `~/.claude/skills/breathing/SKILL.md`; Codex: its current skill or `AGENTS.md` format — check the current docs). The skill content is the same for each client.
+Ship a skill in the format of each client (Claude Code: `~/.claude/skills/klat/SKILL.md`; Codex: its current skill or `AGENTS.md` format — check the current docs). The skill content is the same for each client.
 
 ### Speech rules (the content of the skill)
 

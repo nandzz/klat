@@ -8,7 +8,7 @@ import { codexServerBlock, upsertTomlSection } from "./toml.js";
 
 const run = promisify(execFile);
 const HOME = homedir();
-const SERVER_NAME = "breathing";
+const SERVER_NAME = "klat";
 
 interface Step {
   client: string;
@@ -31,7 +31,7 @@ async function findCommand(name: string): Promise<string | null> {
 }
 
 function skillSource(): string {
-  return join(app.getAppPath(), "skill", "breathing");
+  return join(app.getAppPath(), "skill", "klat");
 }
 
 function bridgePath(): string {
@@ -56,7 +56,7 @@ export async function planInstall(): Promise<Step[]> {
 
   const claude = await findCommand("claude");
   if (claude || existsSync(join(HOME, ".claude"))) {
-    const skillTarget = join(HOME, ".claude", "skills", "breathing");
+    const skillTarget = join(HOME, ".claude", "skills", "klat");
     if (claude) {
       steps.push({
         client: "Claude Code",
@@ -80,7 +80,7 @@ export async function planInstall(): Promise<Step[]> {
   const codexHome = process.env.CODEX_HOME ?? join(HOME, ".codex");
   if (codex || existsSync(codexHome)) {
     const configFile = join(codexHome, "config.toml");
-    const skillTarget = join(codexHome, "skills", "breathing");
+    const skillTarget = join(codexHome, "skills", "klat");
     steps.push({
       client: "Codex",
       description: `Add [mcp_servers.${SERVER_NAME}] (stdio bridge) to ${configFile.replace(HOME, "~")}`,
@@ -106,7 +106,7 @@ export async function runInstaller(port: number): Promise<void> {
     await dialog.showMessageBox({
       type: "info",
       message: "No supported AI client found",
-      detail: `Breathing looks for Claude Code and Codex. For other MCP clients, add this server:\n\nhttp://127.0.0.1:${port}/mcp\n\nThe README has the manual steps.`,
+      detail: `Klat looks for Claude Code and Codex. For other MCP clients, add this server:\n\nhttp://127.0.0.1:${port}/mcp\n\nThe README has the manual steps.`,
     });
     return;
   }
@@ -116,7 +116,7 @@ export async function runInstaller(port: number): Promise<void> {
     buttons: ["Install", "Cancel"],
     defaultId: 0,
     cancelId: 1,
-    message: `Connect Breathing to ${clients}?`,
+    message: `Connect Klat to ${clients}?`,
     detail: `These changes will be made:\n\n${steps.map((s) => `• ${s.description}`).join("\n")}\n\nRestart running agent sessions after the install.`,
   });
   if (response !== 0) return;
@@ -131,7 +131,7 @@ export async function runInstaller(port: number): Promise<void> {
   }
   await dialog.showMessageBox({
     type: failures.length ? "warning" : "info",
-    message: failures.length ? "Some steps failed" : "Breathing is connected",
+    message: failures.length ? "Some steps failed" : "Klat is connected",
     detail: failures.length
       ? failures.join("\n\n")
       : `Done for ${clients}. Start a new agent session so it loads the voice.`,

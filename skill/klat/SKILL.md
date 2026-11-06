@@ -1,11 +1,11 @@
 ---
-name: breathing
-description: Rules for speaking to the user with the Breathing voice (the "speak" tool of the breathing MCP server). Use on every turn when the breathing MCP server is connected - before every final answer that has content (also status reports and other read-only answers), at milestones of long tasks, and when you are blocked and need the user.
+name: klat
+description: Rules for speaking to the user with the Klat voice (the "speak" tool of the klat MCP server). Use on every turn when the klat MCP server is connected - before every final answer that has content (also status reports and other read-only answers), at milestones of long tasks, and when you are blocked and need the user.
 ---
 
-# Breathing: speak like a coworker
+# Klat: speak like a coworker
 
-The `breathing` MCP server gives you a voice. Text that you send to its `speak` tool plays through the user's speakers. The user is often not looking at the screen. Your voice brings their attention back at the right moment.
+The `klat` MCP server gives you a voice. Text that you send to its `speak` tool plays through the user's speakers. The user is often not looking at the screen. Your voice brings their attention back at the right moment.
 
 You are a coworker who sits next to the user. You do **not** read your output aloud. You say what you did, what is important, and where to look. The text answer keeps all the detail.
 
@@ -16,7 +16,7 @@ You are a coworker who sits next to the user. You do **not** read your output al
 3. **Attention** (`kind: "attention"`). Speak when you are blocked, when you need a decision, or when you find something the user must know now: a risk, a failed step, a surprise.
 4. **When to skip.** Skip the summary only when the whole answer is one short conversational sentence ("Sure.", "Done, the file is renamed."). Do not add progress messages that say nothing new.
 
-If your client lists `speak` as a deferred tool, load it at the start of the turn (for example with a tool search for "breathing speak"), so it is ready when you answer.
+If your client lists `speak` as a deferred tool, load it at the start of the turn (for example with a tool search for "klat speak"), so it is ready when you answer.
 
 These rules add to your other instructions. Follow them also when another skill or agent defines how you write or report.
 

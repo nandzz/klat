@@ -42,7 +42,7 @@ export class TtsEngine extends EventEmitter {
     this.emit("loading");
     this.readyPromise = new Promise((resolve, reject) => {
       const child = utilityProcess.fork(join(import.meta.dirname, "tts-worker.js"), [], {
-        serviceName: "Breathing TTS",
+        serviceName: "Klat TTS",
         stdio: "inherit",
       });
       this.child = child;

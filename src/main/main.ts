@@ -151,7 +151,7 @@ function setOrbVisible(visible: boolean): void {
 
 function speakTest(text = "Hi. I'm your coding assistant's voice. I'll tell you when something is ready to look at."): void {
   if (settings.get().muted) settings.update({ muted: false });
-  queue.speak({ text, kind: "summary", source: "breathing", interrupt: true });
+  queue.speak({ text, kind: "summary", source: "klat", interrupt: true });
 }
 
 function toggleMute(): void {
@@ -281,7 +281,7 @@ function buildMenu(): Menu {
       click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }),
     },
     { type: "separator" },
-    { label: "Quit Breathing", accelerator: "Command+Q", click: () => app.quit() },
+    { label: "Quit Klat", accelerator: "Command+Q", click: () => app.quit() },
   ];
   return Menu.buildFromTemplate(template);
 }
@@ -289,7 +289,7 @@ function buildMenu(): Menu {
 function updateTray(): void {
   if (!tray) return;
   tray.setImage(trayIcon());
-  tray.setToolTip(`Breathing: ${statusLine()}`);
+  tray.setToolTip(`Klat: ${statusLine()}`);
 }
 
 function registerHotkeys(): void {
@@ -336,7 +336,7 @@ async function startServer(): Promise<void> {
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     serverError = code === "EADDRINUSE" ? `Port ${port} is in use` : `MCP server failed: ${String(error)}`;
-    new Notification({ title: "Breathing", body: `${serverError}. Agents cannot connect.` }).show();
+    new Notification({ title: "Klat", body: `${serverError}. Agents cannot connect.` }).show();
   }
   refresh();
 }

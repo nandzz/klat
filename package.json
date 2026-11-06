@@ -1,6 +1,6 @@
 {
-  "name": "breathing",
-  "productName": "Breathing",
+  "name": "klat",
+  "productName": "Klat",
   "version": "0.1.0",
   "description": "A local voice for AI coding agents, exposed over MCP.",
   "main": "dist/main/main.js",
@@ -11,6 +11,7 @@
     "build": "tsc -p tsconfig.json && node scripts/copy-static.mjs",
     "start": "npm run build && electron .",
     "dist": "npm run build && electron-builder --mac --dir",
+    "release": "scripts/release.sh",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -29,13 +30,16 @@
     "vitest": "^5.1.0"
   },
   "build": {
-    "appId": "dev.nandzz.breathing",
-    "productName": "Breathing",
+    "appId": "com.nandzz.klat",
+    "productName": "Klat",
     "files": [
       "dist/**/*",
       "skill/**/*",
       "assets/**/*",
-      "package.json"
+      "package.json",
+      "!node_modules/onnxruntime-node/bin/napi-v3/linux/**",
+      "!node_modules/onnxruntime-node/bin/napi-v3/win32/**",
+      "!node_modules/onnxruntime-node/bin/napi-v3/darwin/x64/**"
     ],
     "asarUnpack": [
       "node_modules/onnxruntime-node/**/*",
@@ -44,7 +48,17 @@
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": "dir",
+      "target": [
+        {
+          "target": "zip",
+          "arch": ["arm64"]
+        }
+      ],
+      "identity": "Carlos Felipe Conceicao Fernandes (JM3HAUX538)",
+      "hardenedRuntime": true,
+      "notarize": false,
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "minimumSystemVersion": "14.0",
       "extendInfo": {
         "LSUIElement": true
       }

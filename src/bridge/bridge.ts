@@ -13,12 +13,12 @@ const DEFAULT_PORT = 48613;
 const VERSION = "0.1.0";
 
 function log(message: string): void {
-  process.stderr.write(`[breathing-bridge] ${message}\n`);
+  process.stderr.write(`[klat-bridge] ${message}\n`);
 }
 
 function readPort(): number {
-  if (process.env.BREATHING_PORT) return Number(process.env.BREATHING_PORT);
-  const file = join(homedir(), "Library", "Application Support", "Breathing", "settings.json");
+  if (process.env.KLAT_PORT) return Number(process.env.KLAT_PORT);
+  const file = join(homedir(), "Library", "Application Support", "Klat", "settings.json");
   try {
     if (existsSync(file)) return Number(JSON.parse(readFileSync(file, "utf8")).port) || DEFAULT_PORT;
   } catch {
@@ -34,7 +34,7 @@ async function isAppRunning(): Promise<boolean> {
   try {
     const response = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(1000) });
     const body = (await response.json()) as { app?: string };
-    return body.app === "breathing";
+    return body.app === "klat";
   } catch {
     return false;
   }
@@ -49,20 +49,20 @@ function launchApp(): void {
   } else if (exec.includes("node_modules/electron")) {
     spawn(exec, [resolve(import.meta.dirname, "..", "..")], { detached: true, stdio: "ignore", env }).unref();
   } else {
-    spawn("open", ["-b", "dev.nandzz.breathing"], { detached: true, stdio: "ignore" }).unref();
+    spawn("open", ["-b", "com.nandzz.klat"], { detached: true, stdio: "ignore" }).unref();
   }
 }
 
 async function ensureApp(): Promise<void> {
   if (await isAppRunning()) return;
-  log("Breathing app is not running, starting it");
+  log("Klat app is not running, starting it");
   launchApp();
   const deadline = Date.now() + 30_000;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 500));
     if (await isAppRunning()) return;
   }
-  throw new Error("The Breathing app did not start. Open it from Applications.");
+  throw new Error("The Klat app did not start. Open it from Applications.");
 }
 
 let remote: Promise<Client> | null = null;
@@ -86,7 +86,7 @@ function connectRemote(clientName: string): Promise<Client> {
 }
 
 const server = new Server(
-  { name: "breathing", version: VERSION },
+  { name: "klat", version: VERSION },
   { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS },
 );
 

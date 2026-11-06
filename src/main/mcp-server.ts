@@ -65,7 +65,7 @@ export class McpHttpServer {
     const url = new URL(req.url ?? "/", "http://127.0.0.1");
     if (url.pathname === "/health") {
       res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ app: "breathing", version: this.version }));
+      res.end(JSON.stringify({ app: "klat", version: this.version }));
       return;
     }
     if (url.pathname !== "/mcp") {
@@ -108,7 +108,7 @@ export class McpHttpServer {
 
   private createMcpServer(): McpServer {
     const server = new McpServer(
-      { name: "breathing", version: this.version },
+      { name: "klat", version: this.version },
       { instructions: SERVER_INSTRUCTIONS },
     );
     const sourceName = () => server.server.getClientVersion()?.name ?? "agent";

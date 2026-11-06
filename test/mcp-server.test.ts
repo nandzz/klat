@@ -61,7 +61,7 @@ describe("MCP protocol", () => {
   it("sends the speech rules as server instructions", async () => {
     const client = await connect();
     expect(client.getInstructions()).toBe(SERVER_INSTRUCTIONS);
-    expect(client.getServerVersion()).toMatchObject({ name: "breathing", version: "9.9.9" });
+    expect(client.getServerVersion()).toMatchObject({ name: "klat", version: "9.9.9" });
   });
 
   it("lists the speak, stop and status tools", async () => {
@@ -138,7 +138,7 @@ describe("HTTP layer", () => {
   it("answers the health check", async () => {
     const response = await raw("/health");
     expect(response.status).toBe(200);
-    expect(JSON.parse(response.body)).toEqual({ app: "breathing", version: "9.9.9" });
+    expect(JSON.parse(response.body)).toEqual({ app: "klat", version: "9.9.9" });
   });
 
   it("returns 404 for unknown paths", async () => {

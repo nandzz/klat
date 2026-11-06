@@ -1,6 +1,6 @@
 import type { DropFilter, MenuAction, MenuState, OrbState, PlayerEvent, SpeechChunk } from "../shared/types.js";
 
-interface BreathingApi {
+interface KlatApi {
   onEnqueue(cb: (chunk: SpeechChunk) => void): void;
   onDrop(cb: (filter: DropFilter) => void): void;
   onVolume(cb: (volume: number) => void): void;
@@ -16,7 +16,7 @@ interface BreathingApi {
   ready(): void;
 }
 
-const api = (window as unknown as { breathing: BreathingApi }).breathing;
+const api = (window as unknown as { klat: KlatApi }).klat;
 const orb = document.getElementById("orb")!;
 const caption = document.getElementById("caption")!;
 const captionSource = document.getElementById("caption-source")!;
@@ -184,7 +184,7 @@ api.onState((state) => {
   baseStatus = state.status === "speaking" ? "idle" : state.status;
   if (typeof state.progress === "number") root.style.setProperty("--progress", state.progress.toFixed(3));
   setSpeaking(current !== null);
-  orb.title = state.detail ? `Breathing: ${state.detail}` : "Breathing: click for repeat and stop, right click for all settings";
+  orb.title = state.detail ? `Klat: ${state.detail}` : "Klat: click for repeat and stop, right click for all settings";
 });
 
 let dragStart: { x: number; y: number } | null = null;

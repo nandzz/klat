@@ -6,7 +6,7 @@ function on<T>(channel: string, callback: Callback<T>): void {
   ipcRenderer.on(channel, (_event, value: T) => callback(value));
 }
 
-contextBridge.exposeInMainWorld("breathing", {
+contextBridge.exposeInMainWorld("klat", {
   onEnqueue: (cb: Callback<unknown>) => on("player:enqueue", cb),
   onDrop: (cb: Callback<unknown>) => on("player:drop", cb),
   onVolume: (cb: Callback<number>) => on("player:volume", cb),
