@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 280" width="280" height="280" role="img" aria-label="Klat">
+  <title>Klat</title>
+  <defs>
+    <radialGradient id="halo" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#7cf2d4" stop-opacity="0.55"/>
+      <stop offset="0.99" stop-color="#6f8cff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="base" x1="0.18" y1="0.12" x2="0.82" y2="0.88">
+      <stop offset="0" stop-color="#7cf2d4"/>
+      <stop offset="1" stop-color="#6f8cff"/>
+    </linearGradient>
+    <radialGradient id="violet" cx="0.7" cy="0.75" r="0.64">
+      <stop offset="0" stop-color="#b98cff"/>
+      <stop offset="1" stop-color="#b98cff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="shine" cx="0.34" cy="0.3" r="0.33">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="17" stdDeviation="25" flood-color="#283c8c" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <style>
+    .halo { transform-origin: 140px 140px; animation: halo 5.2s ease-in-out infinite; }
+    .core { transform-origin: 140px 140px; animation: breathe 5.2s ease-in-out infinite; }
+    @keyframes breathe { 0%, 100% { transform: scale(0.9); } 50% { transform: scale(1); } }
+    @keyframes halo { 0%, 100% { transform: scale(0.95); opacity: 0.2; } 50% { transform: scale(1.12); opacity: 0.45; } }
+    @media (prefers-reduced-motion: reduce) {
+      .halo, .core { animation: none; }
+      .halo { opacity: 0.35; }
+    }
+  </style>
+  <circle class="halo" cx="140" cy="140" r="111" fill="url(#halo)" opacity="0.35"/>
+  <g class="core">
+    <circle cx="140" cy="140" r="90" fill="url(#base)" filter="url(#shadow)"/>
+    <circle cx="140" cy="140" r="90" fill="url(#violet)"/>
+    <circle cx="140" cy="140" r="90" fill="url(#shine)"/>
+    <circle cx="140" cy="140" r="89.5" fill="none" stroke="#ffffff" stroke-opacity="0.14"/>
+  </g>
+</svg>

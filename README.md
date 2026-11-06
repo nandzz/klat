@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/logo.svg" width="140" height="140" alt="Klat orb">
+
 # Klat
 
 **A voice for your AI coding agents.**
@@ -12,7 +14,7 @@ Your agent finishes the work. You are in another window. Klat tells you, like a 
 ![MCP](https://img.shields.io/badge/MCP-server-6e56cf)
 
 ```bash
-brew install --cask nandzz/tap/klat
+brew tap nandzz/tap && brew trust nandzz/tap && brew install --cask klat
 ```
 
 </div>
@@ -35,11 +37,31 @@ You start a long task in Claude Code or Codex, and you switch to Slack, a browse
 
 **1. Install**
 
+Add the tap:
+
 ```bash
-brew install --cask nandzz/tap/klat
+brew tap nandzz/tap
 ```
 
-If Homebrew asks you to trust the tap, run `brew trust nandzz/tap` and install again. You can also download the zip from [Releases](https://github.com/nandzz/klat/releases/latest). The app is signed with a Developer ID certificate and notarized by Apple.
+Trust the tap. Homebrew loads casks from a third-party tap only after you trust it:
+
+```bash
+brew trust nandzz/tap
+```
+
+Install Klat:
+
+```bash
+brew install --cask klat
+```
+
+You can also download the zip from [Releases](https://github.com/nandzz/klat/releases/latest). The app is signed with a Developer ID certificate and notarized by Apple.
+
+To update Klat later:
+
+```bash
+brew upgrade --cask klat
+```
 
 **2. Open Klat**
 
